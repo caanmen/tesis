@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutor IA Offline - Centro Cultural</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .loading.show { display: block; }
+
+    /* Banner de carga superior */
+    .loading-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 9999;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+    }
+    .loading-banner.show {
+      display: block;
+    }
+    .loading-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .loading-text {
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes slideDown {
+      from {
+        transform: translateY(-100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    /* Ajustar padding del body cuando el banner está visible */
+    body.loading-active {
+      padding-top: 100px;
+    }
+
+    /* Controles superiores (13, 16) */
+    .top-controls {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-sidebar, #2c3e50);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 999;
+    }
+    .connection-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #fff;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+    .status-dot.disconnected {
+      background: #ef4444;
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .font-controls {
+      display: flex;
+      gap: 5px;
+    }
+    .font-controls button, #btn-theme {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .font-controls button:hover, #btn-theme:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* Barra de progreso (6) */
+    .progress-bar {
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.2);
+      margin-top: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #10b981;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* Botón cancelar (9) */
+    .btn-cancel {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-cancel:hover {
+      background: #ef4444;
+      border-color: #ef4444;
+    }
+
+    /* Header controls (8) */
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-icon {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    /* Botón copiar (7) */
+    .btn-copy {
+      background: rgba(66, 153, 225, 0.1);
+      border: 1px solid #4299e1;
+      color: #4299e1;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+      margin-top: 5px;
+    }
+    .btn-copy:hover {
+      background: #4299e1;
+      color: white;
+    }
+
+    /* Animación fade-in (3) */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .historial-item {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    /* Botones deshabilitados (1) */
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed !important;
+      pointer-events: none;
+    }
+
+    /* Ajuste para top-controls */
+    body {
+      padding-top: 50px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Controles superiores -->
+  <div class="top-controls">
+    <!-- Indicador de conexión (16) -->
+    <div class="connection-indicator" id="connection-status" title="Estado del servidor">
+      <span class="status-dot"></span>
+      <span class="status-text">Conectado</span>
+    </div>
+
+    <!-- Ajuste de fuente (13) -->
+    <div class="font-controls">
+      <button id="btn-font-minus" title="Disminuir texto">A-</button>
+      <button id="btn-font-plus" title="Aumentar texto">A+</button>
+    </div>
+
+    <!-- Botón tema -->
+    <button id="btn-theme" title="Cambiar tema">🌙</button>
+  </div>
+
+  <!-- Banner de carga superior con progreso (6) -->
+  <div id="loading-banner" class="loading-banner">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <span class="loading-text">🤖 Generando respuesta...</span>
+      <button id="btn-cancel" class="btn-cancel" title="Detener generación">✖</button>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <!-- Lado izquierdo: entradas -->
+    <div class="sidebar">
+      <div class="header">
+        <h1>🎓 Tutor Offline IA</h1>
+        <p class="subtitle">Centro Cultural Víctor Jara</p>
+      </div>
+
+      <form id="form-consulta">
+        <!-- SECCIÓN PREGUNTAS GENERALES -->
+        <div class="input-section">
+          <label for="pregunta">
+            <span class="icon">🎓</span> Pregunta General (Física, Química, Biología, Historia, etc.)
+          </label>
+          
+          <!-- Menú de ejemplos por materia -->
+          <select id="preguntas-ejemplo" onchange="cargarPregunta()">
+            <option value="">-- Elige un ejemplo de pregunta --</option>
+            
+            <optgroup label="🔬 Física">
+              <option value="¿Qué es la inercia?">¿Qué es la inercia?</option>
+              <option value="Explica la Tercera Ley de Newton">Explica la Tercera Ley de Newton</option>
+              <option value="¿Qué es la energía potencial?">¿Qué es la energía potencial?</option>
+              <option value="¿Cómo funciona un circuito eléctrico?">¿Cómo funciona un circuito eléctrico?</option>
+              <option value="¿Qué es la velocidad?">¿Qué es la velocidad?</option>
+              <option value="Diferencia entre masa y peso">Diferencia entre masa y peso</option>
+            </optgroup>
+            
+            <optgroup label="🧪 Química">
+              <option value="¿Qué es un átomo?">¿Qué es un átomo?</option>
+              <option value="Explica la tabla periódica">Explica la tabla periódica</option>
+              <option value="¿Qué es un enlace covalente?">¿Qué es un enlace covalente?</option>
+              <option value="¿Qué es un ácido?">¿Qué es un ácido?</option>
+              <option value="¿Qué es la fotosíntesis química?">¿Qué es la fotosíntesis?</option>
+              <option value="¿Qué son los isótopos?">¿Qué son los isótopos?</option>
+            </optgroup>
+            
+            <optgroup label="🧬 Biología">
+              <option value="¿Qué es la célula?">¿Qué es la célula?</option>
+              <option value="Explica la mitosis">Explica la mitosis</option>
+              <option value="¿Qué es el ADN?">¿Qué es el ADN?</option>
+              <option value="¿Qué es un ecosistema?">¿Qué es un ecosistema?</option>
+              <option value="¿Qué es la evolución?">¿Qué es la evolución?</option>
+              <option value="Diferencia entre virus y bacteria">Diferencia entre virus y bacteria</option>
+            </optgroup>
+            
+            <optgroup label="📜 Historia">
+              <option value="¿Quién fue Simón Bolívar?">¿Quién fue Simón Bolívar?</option>
+              <option value="Explica la Revolución Francesa">Explica la Revolución Francesa</option>
+              <option value="¿Qué fue la Segunda Guerra Mundial?">¿Qué fue la Segunda Guerra Mundial?</option>
+              <option value="¿Quién descubrió América?">¿Quién descubrió América?</option>
+              <option value="¿Qué fue la Revolución Industrial?">¿Qué fue la Revolución Industrial?</option>
+            </optgroup>
+            
+            <optgroup label="🌍 Geografía">
+              <option value="¿Dónde está el Amazonas?">¿Dónde está el Amazonas?</option>
+              <option value="¿Qué es un volcán?">¿Qué es un volcán?</option>
+              <option value="¿Qué es el cambio climático?">¿Qué es el cambio climático?</option>
+              <option value="¿Cuál es la capital de Colombia?">¿Cuál es la capital de Colombia?</option>
+              <option value="¿Qué son las placas tectónicas?">¿Qué son las placas tectónicas?</option>
+            </optgroup>
+            
+            <optgroup label="📚 Literatura">
+              <option value="¿Quién fue Gabriel García Márquez?">¿Quién fue Gabriel García Márquez?</option>
+              <option value="¿Qué es una metáfora?">¿Qué es una metáfora?</option>
+              <option value="Explica el Romanticismo literario">Explica el Romanticismo literario</option>
+            </optgroup>
+            
+            <optgroup label="🎨 Arte">
+              <option value="¿Quién fue Pablo Picasso?">¿Quién fue Pablo Picasso?</option>
+              <option value="¿Qué es el Renacimiento?">¿Qué es el Renacimiento?</option>
+              <option value="Explica el Impresionismo">Explica el Impresionismo</option>
+            </optgroup>
+          </select>
+
+          <input 
+            type="text" 
+            id="pregunta" 
+            name="pregunta" 
+            placeholder="Escribe tu pregunta aquí o elige un ejemplo arriba" 
+          />
+          
+          <button type="button" id="btn-explicar" onclick="enviarConsulta('explicar')" class="btn btn-general">
+            🎓 Explicar Tema
+          </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- SECCIÓN MATEMÁTICAS -->
+        <div class="input-section">
+          <label for="ecuacion">
+            <span class="icon">📐</span> Matemáticas (ecuación)
+          </label>
+          
+          <!-- Menú desplegable de ecuaciones comunes -->
+          <select id="ecuaciones-comunes" onchange="cargarEcuacion()">
+            <option value="">-- Elige una ecuación común --</option>
+            <optgroup label="🔢 Álgebra Básica">
+              <option value="2*x + 3 = 7">Ecuación lineal simple: 2x + 3 = 7</option>
+              <option value="5*x - 8 = 2*x + 4">Ecuación con variable en ambos lados: 5x - 8 = 2x + 4</option>
+              <option value="3*(x + 2) = 15">Ecuación con paréntesis: 3(x + 2) = 15</option>
+              <option value="x/4 + 3 = 7">Ecuación con fracción: x/4 + 3 = 7</option>
+            </optgroup>
+            <optgroup label="📊 Ecuaciones Cuadráticas">
+              <option value="x^2 - 5*x + 6 = 0">Cuadrática factorizable: x² - 5x + 6 = 0</option>
+              <option value="x^2 + 4*x + 4 = 0">Cuadrática (raíz doble): x² + 4x + 4 = 0</option>
+              <option value="2*x^2 - 8*x + 6 = 0">Cuadrática con coeficiente: 2x² - 8x + 6 = 0</option>
+            </optgroup>
+            <optgroup label="📏 Geometría y Fórmulas">
+              <option value="pi*r^2">Área del círculo: πr²</option>
+              <option value="2*pi*r">Perímetro del círculo: 2πr</option>
+              <option value="(b*h)/2">Área del triángulo: (b×h)/2</option>
+              <option value="sqrt(a^2 + b^2)">Teorema de Pitágoras: √(a² + b²)</option>
+            </optgroup>
+            <optgroup label="🔬 Física">
+              <option value="m*a">Segunda Ley de Newton: F = ma</option>
+              <option value="(1/2)*m*v^2">Energía cinética: (1/2)mv²</option>
+              <option value="m*g*h">Energía potencial: mgh</option>
+              <option value="v = v0 + a*t">Velocidad con aceleración: v = v₀ + at</option>
+            </optgroup>
+          </select>
+
+          <input 
+            type="text" 
+            id="ecuacion" 
+            name="ecuacion" 
+            placeholder="Ej. 2*x + 3 = 7 (o elige arriba)" 
+          />
+
+          <div class="teclado">
+            <!-- Números -->
+            <button type="button" onclick="add('1')">1</button>
+            <button type="button" onclick="add('2')">2</button>
+            <button type="button" onclick="add('3')">3</button>
+            <button type="button" onclick="add('4')">4</button>
+            <button type="button" onclick="add('5')">5</button>
+            <button type="button" onclick="add('6')">6</button>
+            <button type="button" onclick="add('7')">7</button>
+            <button type="button" onclick="add('8')">8</button>
+            <button type="button" onclick="add('9')">9</button>
+            <button type="button" onclick="add('0')">0</button>
+            <!-- Operadores -->
+            <button type="button" onclick="add('+')">+</button>
+            <button type="button" onclick="add('-')">−</button>
+            <button type="button" onclick="add('*')">×</button>
+            <button type="button" onclick="add('/')">÷</button>
+            <button type="button" onclick="add('^')">^</button>
+            <button type="button" onclick="add('.')">.</button>
+            <!-- Variables / paréntesis -->
+            <button type="button" onclick="add('x')">x</button>
+            <button type="button" onclick="add('y')">y</button>
+            <button type="button" onclick="add('z')">z</button>
+            <button type="button" onclick="add('(')">(</button>
+            <button type="button" onclick="add(')')">)</button>
+            <button type="button" onclick="add('=')">=</button>
+            <!-- Funciones -->
+            <button type="button" onclick="add('sin(')">sin</button>
+            <button type="button" onclick="add('cos(')">cos</button>
+            <button type="button" onclick="add('tan(')">tan</button>
+            <button type="button" onclick="add('sqrt(')">√</button>
+            <button type="button" onclick="add('exp(')">exp</button>
+            <button type="button" onclick="add('pi')">π</button>
+            <!-- Control -->
+            <button type="button" onclick="clr()" class="btn-clear">C</button>
+            <button type="button" onclick="back()" class="btn-back">←</button>
+          </div>
+
+          <div class="buttons">
+            <button type="button" id="btn-pasos" onclick="enviarConsulta('mate_pasos')" class="btn btn-steps">
+              📝 Ver Pasos
+            </button>
+            <button type="button" id="btn-resultado" onclick="enviarConsulta('mate_res')" class="btn btn-result">
+              ⚡ Resultado
+            </button>
+          </div>
+        </div>
+        
+        <!-- Indicador de carga -->
+        <div id="loading" class="loading">
+          <p>⏳ <strong>Generando respuesta...</strong></p>
+          <p>Verás el texto aparecer en tiempo real ⚡</p>
+        </div>
+      </form>
+    </div>
+
+    <!-- Lado derecho: historial -->
+    <div class="result">
+      <div class="result-header">
+        <h2>📋 Historial de Consultas</h2>
+        <div class="header-controls">
+          <span class="badge" id="badge-count">0 consultas</span>
+          <button id="btn-clear-history" class="btn-icon" title="Limpiar historial">🗑️</button>
+        </div>
+      </div>
+
+      <ul class="historial" id="historial">
+        <div class="empty-state">
+          <div class="empty-icon">🤖</div>
+          <p>Aún no hay consultas.</p>
+          <p class="empty-hint">Escribe una pregunta de cualquier materia o una ecuación matemática para comenzar</p>
+        </div>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Variables globales
+    let contadorConsultas = 0;
+    let procesando = false; // (1) Control de procesamiento
+    let abortController = null; // (9) Cancelar generación
+    let progressInterval = null; // (6) Intervalo de progreso
+    let fontSize = 16; // (13) Tamaño de fuente
+
+    // Teclado matemático
+    const eq = document.getElementById('ecuacion');
+    function add(c) { eq.value += c; }
+    function back(){ eq.value = eq.value.slice(0,-1); }
+    function clr() { eq.value = ''; }
+
+    // Cargar ecuación del menú desplegable
+    function cargarEcuacion() {
+      const select = document.getElementById('ecuaciones-comunes');
+      const ecuacion = select.value;
+      if (ecuacion) {
+        eq.value = ecuacion;
+      }
+    }
+
+    // Cargar pregunta del menú de ejemplos
+    function cargarPregunta() {
+      const select = document.getElementById('preguntas-ejemplo');
+      const pregunta = document.getElementById('pregunta');
+      if (select.value) {
+        pregunta.value = select.value;
+      }
+    }
+
+    // (1) Deshabilitar/Habilitar botones
+    function toggleButtons(disabled) {
+      document.getElementById('btn-explicar').disabled = disabled;
+      document.getElementById('btn-pasos').disabled = disabled;
+      document.getElementById('btn-resultado').disabled = disabled;
+    }
+
+    // (6) Barra de progreso estimada
+    function startProgress() {
+      const progressFill = document.getElementById('progress-fill');
+      let width = 0;
+      progressInterval = setInterval(() => {
+        if (width < 95) {
+          width += Math.random() * 2;
+          progressFill.style.width = width + '%';
+        }
+      }, 200);
+    }
+
+    function stopProgress() {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        document.getElementById('progress-fill').style.width = '100%';
+        setTimeout(() => {
+          document.getElementById('progress-fill').style.width = '0%';
+        }, 300);
+      }
+    }
+
+    // AJAX con STREAMING - Ver respuesta en tiempo real
+
+    async function enviarConsulta(metodo) {
+      // (2) Verificar si ya está procesando
+      if (procesando) {
+        alert('⏳ Espera a que termine la respuesta actual');
+        return;
+      }
+
+      const pregunta = document.getElementById('pregunta').value.trim();
+      const ecuacion = document.getElementById('ecuacion').value.trim();
+      const loading = document.getElementById('loading');
+
+      // Validar
+      if (metodo === 'explicar' && !pregunta) {
+        alert('Escribe una pregunta primero');
+        return;
+      }
+      if ((metodo === 'mate_pasos' || metodo === 'mate_res') && !ecuacion) {
+        alert('Escribe una ecuación primero');
+        return;
+      }
+
+      // (1) Deshabilitar botones y marcar como procesando
+      procesando = true;
+      toggleButtons(true);
+
+      // (9) Crear AbortController para poder cancelar
+      abortController = new AbortController();
+
+      // Mostrar loading (abajo y arriba)
+      loading.classList.add('show');
+      const loadingBanner = document.getElementById('loading-banner');
+      loadingBanner.classList.add('show');
+      document.body.classList.add('loading-active');
+
+      // (6) Iniciar barra de progreso
+      startProgress();
+
+      try {
+        const inicio = Date.now();
+        const response = await fetch('/api/consulta_stream', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            metodo: metodo,
+            pregunta: pregunta,
+            ecuacion: ecuacion
+          }),
+          signal: abortController.signal // (9) Para poder cancelar
+        });
+
+        if (!response.ok) {
+          alert('Error en la consulta');
+          return;
+        }
+
+        // Preparar historial para streaming
+        const historial = document.getElementById('historial');
+        const emptyState = historial.querySelector('.empty-state');
+        if (emptyState) emptyState.remove();
+
+        contadorConsultas++;
+        document.getElementById('badge-count').textContent = `${contadorConsultas} consultas`;
+
+        // Crear elemento para streaming
+        let tipo = '', preguntaTexto = '', respuestaCompleta = '';
+        let li = null, preRespuesta = null;
+
+        // Leer stream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+
+                // Metadatos iniciales
+                if (data.start) {
+                  tipo = data.tipo;
+                  preguntaTexto = data.pregunta;
+
+                  const clase = tipo === 'Tema General' ? 'general-item' : 'mate-item';
+                  const icono = tipo === 'Tema General' ? '🎓' : '📐';
+
+                  li = document.createElement('li');
+                  li.className = `historial-item ${clase}`;
+                  li.innerHTML = `
+                    <div class="item-header">
+                      <strong class="item-tipo">${icono} ${tipo}</strong>
+                      <span class="item-time">⏳ generando...</span>
+                    </div>
+                    <div class="item-pregunta">
+                      <em>${preguntaTexto}</em>
+                    </div>
+                    <div class="item-respuesta">
+                      <pre></pre>
+                    </div>
+                  `;
+                  historial.insertBefore(li, historial.firstChild);
+                  preRespuesta = li.querySelector('pre');
+                }
+
+                // Chunk de texto
+                if (data.chunk && preRespuesta) {
+                  respuestaCompleta += data.chunk;
+                  preRespuesta.textContent = respuestaCompleta;
+                }
+
+                // Finalizado
+                if (data.done && li) {
+                  const tiempoReal = ((Date.now() - inicio) / 1000).toFixed(1);
+                  li.querySelector('.item-time').textContent = `${tiempoReal}s`;
+                }
+
+                if (data.error) {
+                  alert('Error: ' + data.error);
+                }
+              } catch (e) {
+                // Ignorar líneas malformadas
+              }
+            }
+          }
+        }
+
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Generación cancelada');
+        } else {
+          alert('Error de conexión: ' + error.message);
+        }
+      } finally {
+        // Rehabilitar todo
+        procesando = false;
+        toggleButtons(false);
+        stopProgress();
+        loading.classList.remove('show');
+        loadingBanner.classList.remove('show');
+        document.body.classList.remove('loading-active');
+        abortController = null;
+      }
+    }
+    
+    function agregarAlHistorial(data, tiempoReal) {
+      const historial = document.getElementById('historial');
+      const badge = document.getElementById('badge-count');
+      
+      // Remover mensaje vacío si existe
+      const emptyState = historial.querySelector('.empty-state');
+      if (emptyState) {
+        emptyState.remove();
+      }
+      
+      // Incrementar contador
+      contadorConsultas++;
+      badge.textContent = `${contadorConsultas} consultas`;
+      
+      // Crear elemento
+      const clase = data.tipo === 'Tema General' ? 'general-item' : 'mate-item';
+      const icono = data.tipo === 'Tema General' ? '🎓' : '📐';
+      
+      const li = document.createElement('li');
+      li.className = `historial-item ${clase}`;
+      li.innerHTML = `
+        <div class="item-header">
+          <strong class="item-tipo">${icono} ${data.tipo}</strong>
+          <span class="item-time">${tiempoReal}s</span>
+        </div>
+        <div class="item-pregunta">
+          <em>${data.pregunta}</em>
+        </div>
+        <div class="item-respuesta">
+          <pre>${data.respuesta}</pre>
+          <button class="btn-copy" onclick="copiarRespuesta(this)">📋 Copiar</button>
+        </div>
+      `;
+
+      // Insertar al inicio
+      historial.insertBefore(li, historial.firstChild);
+
+      // (4) Scroll automático a la nueva respuesta
+      setTimeout(() => {
+        li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+
+    // (7) Función para copiar respuesta
+    function copiarRespuesta(btn) {
+      const respuesta = btn.previousElementSibling.textContent;
+      navigator.clipboard.writeText(respuesta).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copiado!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      });
+    }
+
+    // Tema persistente
+    const btn = document.getElementById('btn-theme');
+    const applyTheme = t => document.body.classList.toggle('dark-theme', t === 'dark');
+    const saved = localStorage.getItem('theme') || 'dark';
+    applyTheme(saved);
+    btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+    btn.addEventListener('click', () => {
+      const now = document.body.classList.contains('dark-theme') ? 'light' : 'dark';
+      applyTheme(now);
+      localStorage.setItem('theme', now);
+      btn.textContent = now === 'dark' ? '☀️' : '🌙';
+    });
+
+    // (8) Limpiar historial
+    document.getElementById('btn-clear-history').addEventListener('click', () => {
+      if (confirm('¿Seguro que quieres borrar todo el historial?')) {
+        const historial = document.getElementById('historial');
+        historial.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🤖</div>
+            <p>Aún no hay consultas.</p>
+            <p class="empty-hint">Escribe una pregunta de cualquier materia o una ecuación matemática para comenzar</p>
+          </div>
+        `;
+        contadorConsultas = 0;
+        document.getElementById('badge-count').textContent = '0 consultas';
+      }
+    });
+
+    // (9) Botón cancelar generación
+    document.getElementById('btn-cancel').addEventListener('click', () => {
+      if (abortController) {
+        abortController.abort();
+        alert('⛔ Generación cancelada');
+      }
+    });
+
+    // (13) Ajuste de tamaño de fuente
+    document.getElementById('btn-font-plus').addEventListener('click', () => {
+      if (fontSize < 24) {
+        fontSize += 2;
+        document.body.style.fontSize = fontSize + 'px';
+        localStorage.setItem('fontSize', fontSize);
+      }
+    });
+
+    document.getElementById('btn-font-minus').addEventListener('click', () => {
+      if (fontSize > 12) {
+        fontSize -= 2;
+        document.body.style.fontSize = fontSize + 'px';
+        localStorage.setItem('fontSize', fontSize);
+      }
+    });
+
+    // Cargar tamaño de fuente guardado
+    const savedFontSize = localStorage.getItem('fontSize');
+    if (savedFontSize) {
+      fontSize = parseInt(savedFontSize);
+      document.body.style.fontSize = fontSize + 'px';
+    }
+
+    // (16) Indicador de conexión
+    async function checkConnection() {
+      try {
+        const response = await fetch('/', { method: 'HEAD' });
+        const statusDot = document.querySelector('.status-dot');
+        const statusText = document.querySelector('.status-text');
+        if (response.ok) {
+          statusDot.classList.remove('disconnected');
+          statusText.textContent = 'Conectado';
+        } else {
+          statusDot.classList.add('disconnected');
+          statusText.textContent = 'Desconectado';
+        }
+      } catch {
+        const statusDot = document.querySelector('.status-dot');
+        const statusText = document.querySelector('.status-text');
+        statusDot.classList.add('disconnected');
+        statusText.textContent = 'Desconectado';
+      }
+    }
+
+    // Verificar conexión cada 10 segundos
+    setInterval(checkConnection, 10000);
+    checkConnection(); // Verificar al cargar
+  </script>
+</body>
+</html>

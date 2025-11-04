@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+venv~/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.benchmarks/
+*test*.html
+*reporte*.html
+test_report.txt
+resultados_unitarios.txt
+
+# Reportes
+reporte_*.txt
+reporte_*.html
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Documentos
+*.docx
+*.pdf
+
+# Claude
+.claude/
+
+# Mediciones
+mediciones/

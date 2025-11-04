@@ -8,7 +8,6 @@ app = Flask(__name__)
 print("🔥 Precalentando modelo qwen2.5:1.5b...")
 import requests
 try:
-    # Precalentar con una consulta ultra-rápida
     requests.post("http://localhost:11434/api/generate", json={
         "model": "qwen2.5:1.5b",
         "prompt": "hi",
@@ -20,7 +19,6 @@ try:
 except Exception as e:
     print(f"⚠️ Advertencia: No se pudo precargar modelo: {e}")
 
-# Historial simple en memoria (se borra al reiniciar)
 historial = []
 
 @app.route("/")
@@ -65,9 +63,6 @@ def consulta_api():
         else:
             return jsonify({"error": "Método inválido."}), 400
 
-
-
-        # Agregar al historial
         historial.append({
             "tipo": tipo,
             "pregunta": pregunta_texto,
@@ -128,10 +123,8 @@ def consulta_stream():
                     yield f"data: {json.dumps({'error': 'Método inválido.'})}\n\n"
                     return
 
-                # Enviar metadatos iniciales
                 yield f"data: {json.dumps({'tipo': tipo, 'pregunta': pregunta_texto, 'start': True})}\n\n"
 
-                # Si la respuesta es un string (Sympy resolvió), enviar directamente
                 if isinstance(r, str):
                     respuesta_completa = r
                     yield f"data: {json.dumps({'chunk': respuesta_completa})}\n\n"
@@ -142,7 +135,6 @@ def consulta_stream():
                     })
                     yield f"data: {json.dumps({'done': True, 'respuesta': respuesta_completa})}\n\n"
                 else:
-                    # Transmitir respuesta desde stream
                     respuesta_completa = ""
                     for line in r.iter_lines():
                         if line:
@@ -153,7 +145,6 @@ def consulta_stream():
                                 yield f"data: {json.dumps({'chunk': texto})}\n\n"
 
                             if chunk.get('done', False):
-                                # Guardar en historial
                                 historial.append({
                                     "tipo": tipo,
                                     "pregunta": pregunta_texto,
